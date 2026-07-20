@@ -1,5 +1,10 @@
+import numpy as np
+
 raw_data_path = "/scratch/aseaditya/Jimenez_data/Re4000/results/scaling/"
 output_path = "/scratch/aseaditya/Jimenez_data/Re4000/minkowski/"
+
+nproc_x = 4
+nproc_z = 4
 
 with open('/scratch/aseaditya/Jimenez_data/Re4000/parameters.txt') as f:
     lines = f.readlines()

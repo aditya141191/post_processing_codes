@@ -15,13 +15,13 @@ size = comm.Get_size()
 
 ###########################################################################
 # -- Use variables defined in inputs.py to set up the parameters for the Minkowski analysis -- #    
-from inputs import raw_data_path, output_path, nx, ny, nz, Lx, Ly, Lz, Re_tau, Re
+from inputs import raw_data_path, output_path, nproc_x, nproc_z, nx, ny, nz, Lx, Ly, Lz, Re_tau, Re
 
 
 ##########################################################################
 #---Parameters to specify domain division to distribute among ranks------#
-ndivx=8 # Number of divisions in x-direction
-ndivz=4 # Number of divisions in z-direction
+ndivx=nproc_x # Number of divisions in x-direction
+ndivz=nproc_z # Number of divisions in z-direction
 ##########################################################################
 #---Data Parameters - Grid size, number of points and Reynolds number----#
 # [nx, ny, nz, Lx, Ly, Lz, Re_tau, Re]=bp.grid()

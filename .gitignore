@@ -8,6 +8,7 @@ __pycache__/
 
 # User Define "token" file
 token
+job.sh
 
 # Distribution / packaging
 .Python
