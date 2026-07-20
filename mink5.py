@@ -4,7 +4,7 @@ import sys
 import scipy
 import scipy.io
 import minkowski as mn
-import bandpass as bp
+# import bandpass as bp
 import pandas as pd
 from mpi4py import MPI
 # import psutil
@@ -13,13 +13,18 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
+###########################################################################
+# -- Use variables defined in inputs.py to set up the parameters for the Minkowski analysis -- #    
+from inputs import raw_data_path, output_path, nx, ny, nz, Lx, Ly, Lz, Re_tau, Re
+
+
 ##########################################################################
 #---Parameters to specify domain division to distribute among ranks------#
 ndivx=8 # Number of divisions in x-direction
 ndivz=4 # Number of divisions in z-direction
 ##########################################################################
 #---Data Parameters - Grid size, number of points and Reynolds number----#
-[nx, ny, nz, Lx, Ly, Lz, Re_tau, Re]=bp.grid()
+# [nx, ny, nz, Lx, Ly, Lz, Re_tau, Re]=bp.grid()
 ##########################################################################
 # Load velocity data from binary files
 # S=30 # Filter length scale
@@ -30,7 +35,7 @@ else:
     raise ValueError("Please provide the filter length scale as input in the command-line argument.")
 ##########################################################################
 ##########################################################################
-fpath1="./results/scaling/" # Path to the raw data files
+fpath1=raw_data_path # Path to the raw data files
 y=1-np.cos(np.arange((ny//2)+1)*np.pi/(ny-1)) # Chebyshev y-coordinate
 # y=np.empty(ny)
 # with open('ymesh4000.dat','rb') as fid2:
@@ -103,7 +108,7 @@ sub_comm.Scatter(all_blocks, local_block, root=0)
 
 comm.Barrier()
 zone=group_id+1
-fpath2="./minkowski/var_lf"+str(S)+"/zone"+str(zone) # path where the output is written
+fpath2=os.joinpath(output_path,"var_lf"+str(S)+"/zone"+str(zone)) # path where the output is written
 fname2="ens"+str(S)+"/Rank"+str(sub_rank) # folder name
 xloc=np.split(x, ndivx)[sub_rank%ndivx] # local x-local coordinate for each rank
 zloc=np.split(z, ndivz)[sub_rank//ndivx] # local z-local coordinate for each rank
