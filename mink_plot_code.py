@@ -42,6 +42,7 @@ for ax, zone in zip(axes, zones):
 
         df = pd.read_csv(csv_path)
         if {"P", "F"}.issubset(df.columns):
+            df = df[(df["P"] > 0) & (df["F"] > 0)]
             x = df["P"].to_numpy()
             y = df["F"].to_numpy()
             ax.scatter(
@@ -51,7 +52,7 @@ for ax, zone in zip(axes, zones):
                 marker=markers[idx % len(markers)],
                 color=colors[idx],
                 alpha=0.7,
-                label=scale_dir.name,
+                label=f"$l^+ = {int(scale_dir.name[6:8])}$", # labels should be $l^+ = xx$
             )
 
     ax.set_title(zone)
@@ -60,7 +61,13 @@ for ax, zone in zip(axes, zones):
     ax.grid(True, alpha=0.3)
 
 handles, labels = axes[0].get_legend_handles_labels()
-fig.legend(handles, labels, loc="upper center", ncol=min(4, len(labels)), frameon=False)
-fig.suptitle("Scatter Plot of P vs F by Zone and Scale")
+axes[2].legend(
+    handles,
+    labels,
+    loc="upper right",
+    frameon=False,
+)
+fig.suptitle("Morphology of enstrophy structures at filter scale $l$, $Re_\\tau = 4000$")
 plt.tight_layout(rect=[0, 0, 1, 0.95])
-plt.show()
+plt.savefig("P_vs_F_scatter_plot.png", dpi=300)
+plt.savefig("P_vs_F_scatter_plot.eps", format="eps")
