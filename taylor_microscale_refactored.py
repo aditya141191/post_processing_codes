@@ -9,11 +9,6 @@ import pandas as pd
 
 
 def analyze_re(re_name, base_dir, ax_lambda, ax_re_lambda):
-    if (base_dir / f"{re_name}_taylor_microscale.csv").exists():
-        df = pd.read_csv(base_dir / f"{re_name}_taylor_microscale.csv")
-        ax_lambda.plot(df["y"] * df["re_tay"], df["tay_micro"] * df["re_tay"], label=f"$Re_{{\\tau}}=${re_name[2:]}")
-        ax_re_lambda.plot(df["y"] * df["re_tay"], df["re_tay"], label=f"$Re_{{\\tau}}=${re_name[2:]}")
-        return
     folder = base_dir / re_name
     if not folder.exists():
         print(f"Skipping {re_name}: folder not found")
@@ -30,6 +25,12 @@ def analyze_re(re_name, base_dir, ax_lambda, ax_re_lambda):
 
     nx, ny, nz, Lx, Ly, Lz, Re_tau, Re = bp.grid()
     nu = 1.0 / Re
+    
+    if (base_dir / f"{re_name}_taylor_microscale.csv").exists():
+    df = pd.read_csv(base_dir / f"{re_name}_taylor_microscale.csv")
+    ax_lambda.plot(df["y"] * Re_tau, df["tay_micro"] * Re_tau, label=f"$Re_{{\\tau}}=${re_name[2:]}")
+    ax_re_lambda.plot(df["y"] * Re_tau, df["re_tay"], label=f"$Re_{{\\tau}}=${re_name[2:]}")
+    return
 
     with open(f"{re_name}U", "rb") as fid:
         data = np.fromfile(fid, "float32")
