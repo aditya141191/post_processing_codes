@@ -23,7 +23,6 @@ def analyze_re(re_name, base_dir, ax_lambda, ax_re_lambda):
     import bandpass as bp
     import flux
 
-    comm = MPI.COMM_WORLD
     nx, ny, nz, Lx, Ly, Lz, Re_tau, Re = bp.grid()
     nu = 1.0 / Re
 
