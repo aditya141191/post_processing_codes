@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from mpi4py import MPI
+import pandas as pd
 
 
 def analyze_re(re_name, base_dir, ax_lambda, ax_re_lambda):
@@ -53,15 +53,18 @@ def analyze_re(re_name, base_dir, ax_lambda, ax_re_lambda):
             y[i] = 1.0 - np.cos(np.pi * i / (ny - 1))
 
     ux = flux.gradx(u)
-    uy = flux.grady(u, y, comm)
+    # uy = flux.grady(u, y, comm)
+    uy = np.gradient(u, y, axis=1)
     uz = flux.gradz(u)
 
     vx = flux.gradx(v)
-    vy = flux.grady(v, y, comm)
+    # vy = flux.grady(v, y, comm)
+    vy = np.gradient(v, y, axis=1)
     vz = flux.gradz(v)
 
     wx = flux.gradx(w)
-    wy = flux.grady(w, y, comm)
+    # wy = flux.grady(w, y, comm)
+    wy = np.gradient(w, y, axis=1)
     wz = flux.gradz(w)
 
     diss = (1.0 / Re) * (
@@ -72,8 +75,11 @@ def analyze_re(re_name, base_dir, ax_lambda, ax_re_lambda):
     tay_micro = np.sqrt(5.0 * nu * q / diss)
     re_tay = q * np.sqrt(5.0 / (3.0 * nu * diss))
 
-    ax_lambda.plot(y * Re_tau, tay_micro * Re_tau, label=f"{re_name} (Re_tau={int(Re_tau)})")
-    ax_re_lambda.plot(y * Re_tau, re_tay, label=f"{re_name} (Re_tau={int(Re_tau)})")
+    df = pd.DataFrame({"y": y[1:ny//2+1], "tay_micro": tay_micro[1:ny//2+1], "re_tay": re_tay[1:ny//2+1]})
+    df.to_csv(base_dir / f"{re_name}_taylor_microscale.csv", index=False)
+
+    ax_lambda.plot(y[1:ny//2+1] * Re_tau, tay_micro[1:ny//2+1] * Re_tau, label=f"{re_name} (Re_tau={int(Re_tau)})")
+    ax_re_lambda.plot(y[1:ny//2+1] * Re_tau, re_tay[1:ny//2+1], label=f"{re_name} (Re_tau={int(Re_tau)})")
 
 
 if __name__ == "__main__":
@@ -98,4 +104,5 @@ if __name__ == "__main__":
 
     fig.tight_layout()
     fig.savefig(base_dir / "taylor_microscale_comparison.eps", format="eps")
-    plt.show()
+    fig.savefig(base_dir / "taylor_microscale_comparison.png", format="png")
+    # plt.show()
