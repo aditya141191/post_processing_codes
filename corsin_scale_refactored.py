@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
-def analyze_re(re_name, base_dir, ax_lambda, ax_re_lambda):
+def analyze_re(re_name, base_dir, ax):
     folder = base_dir / re_name
     if not folder.exists():
         print(f"Skipping {re_name}: folder not found")
@@ -25,11 +25,11 @@ def analyze_re(re_name, base_dir, ax_lambda, ax_re_lambda):
 
     nx, ny, nz, Lx, Ly, Lz, Re_tau, Re = bp.grid()
     nu = 1.0 / Re
-    
-    if (base_dir / f"{re_name}_taylor_microscale.csv").exists():
-        df = pd.read_csv(base_dir / f"{re_name}_taylor_microscale.csv")
-        ax_lambda.plot(df["y"] * Re_tau, df["tay_micro"] * Re_tau, label=f"$Re_{{\\tau}}=${re_name[2:]}")
-        ax_re_lambda.plot(df["y"] * Re_tau, df["re_tay"], label=f"$Re_{{\\tau}}=${re_name[2:]}")
+
+    csv_path = folder / "corsin_scale.csv"
+    if csv_path.exists():
+        df = pd.read_csv(csv_path)
+        ax.plot(df["y"] * Re_tau, df["L_c"], label=f"$Re_{{\\tau}}=${re_name[2:]}")
         return
 
     with open(f"{re_name}U", "rb") as fid:
@@ -44,7 +44,11 @@ def analyze_re(re_name, base_dir, ax_lambda, ax_re_lambda):
         data = np.fromfile(fid, "float32")
     w = np.reshape(data, (nx, ny, nz), order="F")
 
-    q = np.mean(u**2 + v**2 + w**2, axis=(0, 2))
+    mean_velocity_path = folder / "Um.txt"
+    if mean_velocity_path.is_file():
+        U = np.atleast_1d(np.loadtxt(mean_velocity_path, ndmin=1)).reshape(-1)
+    else:
+        raise FileNotFoundError(f"Mean velocity file {mean_velocity_path} not found.")
 
     y = np.empty(ny)
     if (folder / "ymesh4000.dat").is_file():
@@ -57,32 +61,43 @@ def analyze_re(re_name, base_dir, ax_lambda, ax_re_lambda):
         for i in range(ny):
             y[i] = 1.0 - np.cos(np.pi * i / (ny - 1))
 
+    if U.size != ny:
+        if U.size == ny - 1:
+            U = np.concatenate(([U[0]], U))
+        elif U.size == ny + 1:
+            U = U[1:]
+        else:
+            raise ValueError(f"Unexpected Um.txt length {U.size} for ny={ny}")
+
+    S = np.gradient(U, y)
+
     ux = flux.gradx(u)
-    # uy = flux.grady(u, y, comm)
     uy = np.gradient(u, y, axis=1)
     uz = flux.gradz(u)
 
     vx = flux.gradx(v)
-    # vy = flux.grady(v, y, comm)
     vy = np.gradient(v, y, axis=1)
     vz = flux.gradz(v)
 
     wx = flux.gradx(w)
-    # wy = flux.grady(w, y, comm)
     wy = np.gradient(w, y, axis=1)
     wz = flux.gradz(w)
 
     diss = (1/Re)*(2*(ux**2+vy**2+wz**2)+(uy+vx)**2+(uz+wx)**2+(vz+wy)**2)
     diss = np.mean(diss, axis=(0, 2))
 
-    tay_micro = np.sqrt(5.0 * nu * q / diss)
-    re_tay = q * np.sqrt(5.0 / (3.0 * nu * diss))
+    safe_S = np.maximum(np.abs(S) ** 3, np.finfo(float).tiny)
+    L_c = np.sqrt(diss / safe_S)
 
-    df = pd.DataFrame({"y": y[1:ny//2+1], "tay_micro": tay_micro[1:ny//2+1], "re_tay": re_tay[1:ny//2+1]})
-    df.to_csv(base_dir / f"{re_name}_taylor_microscale.csv", index=False)
+    mask = np.arange(ny) <= ny // 2
+    y_trim = y[1:ny // 2 + 1]
+    L_c_trim = L_c[1:ny // 2 + 1]
 
-    ax_lambda.plot(y[1:ny//2+1] * Re_tau, tay_micro[1:ny//2+1] * Re_tau, label=f"$Re_{{\\tau}}=${re_name[2:]}")
-    ax_re_lambda.plot(y[1:ny//2+1] * Re_tau, re_tay[1:ny//2+1], label=f"$Re_{{\\tau}}=${re_name[2:]}")
+    df = pd.DataFrame({"y": y_trim, "L_c": L_c_trim})
+    df.to_csv(csv_path, index=False)
+
+    ax.plot(y_trim * Re_tau, L_c_trim, label=f"$Re_{{\\tau}}=${re_name[2:]}")
+
 
 if __name__ == "__main__":
     script_dir = Path(__file__).resolve().parent
@@ -90,22 +105,16 @@ if __name__ == "__main__":
     if not any((base_dir / re_name).exists() for re_name in ["Re550", "Re950", "Re2000", "Re4000"]):
         base_dir = script_dir.parent
 
-    fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+    fig, ax = plt.subplots(figsize=(8, 5))
     for re_name in ["Re550", "Re950", "Re2000", "Re4000"]:
         print(f"Analyzing {re_name}...")
-        analyze_re(re_name, base_dir, ax[0], ax[1])
+        analyze_re(re_name, base_dir, ax)
 
-    ax[0].set_xlabel(r"$y^+$")
-    ax[0].set_ylabel(r"$\lambda^+$")
-    ax[0].grid(True)
-    ax[0].legend()
-
-    ax[1].set_xlabel(r"$y^+$")
-    ax[1].set_ylabel(r"$Re_{\lambda}$")
-    ax[1].grid(True)
-    ax[1].legend()
+    ax.set_xlabel(r"$y^+$")
+    ax.set_ylabel(r"$L_c$")
+    ax.grid(True)
+    ax.legend()
 
     fig.tight_layout()
-    fig.savefig(base_dir / "taylor_microscale_comparison.eps", format="eps")
-    fig.savefig(base_dir / "taylor_microscale_comparison.png", format="png")
-    # plt.show()
+    fig.savefig(base_dir / "corsin_scale_comparison.eps", format="eps")
+    fig.savefig(base_dir / "corsin_scale_comparison.png", format="png")
